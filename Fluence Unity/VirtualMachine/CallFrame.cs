@@ -59,8 +59,8 @@ namespace Fluence.Unity.VirtualMachine
 
         public CallFrame()
         {
-            Registers = new RuntimeValue[0];
-            WritableCache = new bool[0];
+            Registers = Array.Empty<RuntimeValue>();
+            WritableCache = Array.Empty<bool>();
             RegisterCount = 0;
         }
 
@@ -95,7 +95,13 @@ namespace Fluence.Unity.VirtualMachine
 
             if (requiredSize > 0)
             {
+                Array.Clear(Registers, 0, Registers.Length);
                 Array.Clear(WritableCache, 0, requiredSize);
+            }
+
+            if (RefParameterMap.Count != 0)
+            {
+                RefParameterMap.Clear();
             }
         }
     }

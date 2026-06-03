@@ -14,8 +14,6 @@ namespace Fluence.Unity.RuntimeTypes
 
         public StringObject() { }
 
-        internal void Reset() => Value = string.Empty;
-
         internal void Initialize(string str) => Value = str;
 
         private static RuntimeValue Length(FluenceVirtualMachine vm, RuntimeValue self)

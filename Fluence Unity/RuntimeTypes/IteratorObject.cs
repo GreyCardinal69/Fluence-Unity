@@ -19,11 +19,6 @@
 
         public IteratorObject() { }
 
-        internal void Reset()
-        {
-            Iterable = null;
-        }
-
         internal void Initialize(object? iterator)
         {
             Iterable = iterator;

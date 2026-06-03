@@ -1,20 +1,21 @@
 ﻿namespace Fluence.Unity.VirtualMachine
 {
     /// <summary>
-    /// An object pool designed to minimize Garbage Collection 
-    /// allocations for short-lived, frequently created runtime objects.
+    /// An object pool for objects that require state clearing to prevent memory leaks.
     /// </summary>
-    internal sealed class ObjectPool<T> where T : class, new()
+    internal sealed class ResettableObjectPool<T> where T : class, new()
     {
         private readonly Stack<T> _pool = new Stack<T>();
+        private readonly Action<T>? _resetAction;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObjectPool{T}"/> with a default capacity of 16 unless a custom capacity is given.
         /// </summary>
         /// <param name="resetAction">An optional action invoked on an object when it is returned to the pool to clear its state.</param>
         /// <param name="initialCapacity">The number of objects to pre-allocate. Defaults to 16.</param>
-        internal ObjectPool(int initialCapacity = 16)
+        internal ResettableObjectPool(Action<T> resetAction = null!, int initialCapacity = 16)
         {
+            _resetAction = resetAction;
             for (int i = 0; i < initialCapacity; i++)
             {
                 _pool.Push(new T());
@@ -39,6 +40,7 @@
         /// <param name="item">The object to recycle.</param>
         internal void Return(T item)
         {
+            _resetAction?.Invoke(item);
             _pool.Push(item);
         }
 

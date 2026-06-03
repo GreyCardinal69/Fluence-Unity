@@ -229,11 +229,11 @@ namespace Fluence.Unity.VirtualMachine
         /// <param name="input">The delegate to handle user input.</param>
         internal FluenceVirtualMachine(List<InstructionLine> bytecode, VirtualMachineConfiguration config, ParseState parseState, TextOutputMethod? output, TextOutputMethod? outputLine, TextInputMethod? input)
         {
-            _callFramePool = new ObjectPool<CallFrame>(frame => frame.RefParameterMap.Clear());
-            _iteratorObjectPool = new ObjectPool<IteratorObject>(iter => iter.Reset());
-            _charObjectPool = new ObjectPool<CharObject>(chr => chr.Reset());
+            _callFramePool = new ObjectPool<CallFrame>();
+            _iteratorObjectPool = new ObjectPool<IteratorObject>();
+            _charObjectPool = new ObjectPool<CharObject>();
             _functionObjectPool = new ObjectPool<FunctionObject>();
-            _stringObjectPool = new ObjectPool<StringObject>(str => str.Reset());
+            _stringObjectPool = new ObjectPool<StringObject>();
             _rangeObjectPool = new ObjectPool<RangeObject>();
 
             _parser = parseState.ParserInstance;
@@ -605,6 +605,7 @@ namespace Fluence.Unity.VirtualMachine
         /// Returns a reusable CallFrame insitance from the CallFrame pool or creates one if non are available.
         /// </summary>
         /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal CallFrame GetCallframe() => _callFramePool.Get();
 
         /// <summary>
@@ -2234,6 +2235,7 @@ namespace Fluence.Unity.VirtualMachine
             _ip = function.StartAddress;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public RuntimeValue PopStack()
         {
             if (_operandStack.Count > 0)
@@ -2880,16 +2882,10 @@ namespace Fluence.Unity.VirtualMachine
                         }
                     }
 
-                    foreach (Symbol valSymbol in _globalScope.Symbols.Values)
+                    if (_globalScope.TryResolve(var.Hash, out Symbol globalSym) && globalSym is VariableSymbol varSym)
                     {
-                        if (valSymbol is VariableSymbol varSymbol && varSymbol.Hash == var.Hash)
-                        {
-                            returnValue = GetRuntimeValue(varSymbol.Value, instruction);
-                            if (returnValue != RuntimeValue.Nil)
-                            {
-                                return returnValue;
-                            }
-                        }
+                        returnValue = GetRuntimeValue(varSym.Value, instruction);
+                        if (returnValue.Type != RuntimeValueType.Nil) return returnValue;
                     }
                 }
             }
