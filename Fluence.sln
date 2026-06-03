@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fluence", "Fluence.csproj", "{4E98250A-F29F-4310-9190-E7BB991E4A5A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release_Unity|Any CPU = Release_Unity|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4E98250A-F29F-4310-9190-E7BB991E4A5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E98250A-F29F-4310-9190-E7BB991E4A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E98250A-F29F-4310-9190-E7BB991E4A5A}.Release_Unity|Any CPU.ActiveCfg = Release_Unity|Any CPU
+		{4E98250A-F29F-4310-9190-E7BB991E4A5A}.Release_Unity|Any CPU.Build.0 = Release_Unity|Any CPU
+		{4E98250A-F29F-4310-9190-E7BB991E4A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E98250A-F29F-4310-9190-E7BB991E4A5A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F2FC0520-ACCF-4319-A9B7-EF4A5A119FE4}
+	EndGlobalSection
+EndGlobal

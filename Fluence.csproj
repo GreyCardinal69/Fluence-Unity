@@ -1,0 +1,59 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>Assets\Fluence3.ico</ApplicationIcon>
+    <AssemblyName>Fluence</AssemblyName>
+    <RootNamespace>Fluence</RootNamespace>
+    <Title>Fluence</Title>
+    <Authors>Cardinalius</Authors>
+    <Description>The Fluence programming language in C#</Description>
+    <Copyright>Copyright © $([System.DateTime]::UtcNow.Year) Cardinalius</Copyright>
+    <PackageProjectUrl>https://github.com/GreyCardinal69/Fluence</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/GreyCardinal69/Fluence</RepositoryUrl>
+    <PackageTags>Fluence;programming language</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>Fluence3.png</PackageIcon>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <SignAssembly>False</SignAssembly>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+	<PropertyGroup>
+		<Version>0.1.4-alpha</Version>
+		<AssemblyVersion>0.1.4.0</AssemblyVersion>
+		<FileVersion>0.1.4.0</FileVersion>
+		<InformationalVersion>0.1.4-alpha</InformationalVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="Fluence Unity\Core\**\*.*">
+			<Link>Core\%(RecursiveDir)%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+
+	<ItemGroup>
+    <Content Include="Assets\Fluence3.ico" />
+  </ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Assets\Fluence3.png">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	  <None Update="README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	</ItemGroup>
+
+</Project>
