@@ -1,4 +1,5 @@
 ﻿using Fluence.Unity.VirtualMachine;
+using System.Collections.Generic;
 
 namespace Fluence.Unity.RuntimeTypes
 {
@@ -12,13 +13,13 @@ namespace Fluence.Unity.RuntimeTypes
     /// <summary>
     /// Represents an isolated execution thread that can be paused and resumed.
     /// </summary>
-    internal sealed record class CoroutineObject : IFluenceObject
+    internal sealed class CoroutineObject : IFluenceObject
     {
         internal CoroutineState State { get; set; } = CoroutineState.Suspended;
 
-        internal Stack<CallFrame> CallStack { get; init; } = new Stack<CallFrame>();
-        internal Stack<RuntimeValue> OperandStack { get; init; } = new Stack<RuntimeValue>();
-        internal Stack<TryCatchValue> TryCatchBlocks { get; init; } = new Stack<TryCatchValue>();
+        internal Stack<CallFrame> CallStack { get; private set; } = new Stack<CallFrame>();
+        internal Stack<RuntimeValue> OperandStack { get; private set; } = new Stack<RuntimeValue>();
+        internal Stack<TryCatchValue> TryCatchBlocks { get; private set; } = new Stack<TryCatchValue>();
 
         internal int InstructionPointer { get; set; }
 
@@ -45,7 +46,7 @@ namespace Fluence.Unity.RuntimeTypes
             return vm.ResolveStringObjectRuntimeValue(coro.State.ToString().ToLowerInvariant());
         }
 
-        public bool TryGetIntrinsicMethod(string name, out FluenceVirtualMachine.IntrinsicRuntimeMethod method)
+        bool IFluenceObject.TryGetIntrinsicMethod(string name, out FluenceVirtualMachine.IntrinsicRuntimeMethod method)
         {
             method = name switch
             {

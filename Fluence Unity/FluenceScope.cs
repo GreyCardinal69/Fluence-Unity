@@ -1,6 +1,5 @@
 ﻿using Fluence.Unity.RuntimeTypes;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 namespace Fluence.Unity
 {
@@ -79,16 +78,12 @@ namespace Fluence.Unity
         /// <returns>True if the symbol was found in this scope or any parent scope; otherwise, false.</returns>
         internal bool TryResolve(int hash, out Symbol symbol)
         {
-            FluenceScope current = this;
+            FluenceScope? current = this;
 
             while (current != null)
             {
-                ref Symbol localSymbol = ref CollectionsMarshal.GetValueRefOrNullRef(current.Symbols, hash);
-                if (!Unsafe.IsNullRef(ref localSymbol))
-                {
-                    symbol = localSymbol;
+                if (current.Symbols.TryGetValue(hash, out symbol))
                     return true;
-                }
 
                 current = current.ParentScope;
             }

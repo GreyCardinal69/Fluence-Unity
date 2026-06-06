@@ -1,4 +1,6 @@
 ﻿using Fluence.Unity.RuntimeTypes;
+using System.Collections.Generic;
+using System.IO;
 
 namespace Fluence.Unity
 {

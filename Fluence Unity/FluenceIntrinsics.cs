@@ -1,5 +1,7 @@
 ﻿using Fluence.Unity.Extensions;
 using Fluence.Unity.Global;
+using System;
+using System.Collections.Generic;
 using static Fluence.Unity.FluenceInterpreter;
 
 namespace Fluence.Unity

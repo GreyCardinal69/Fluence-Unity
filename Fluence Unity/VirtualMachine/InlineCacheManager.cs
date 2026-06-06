@@ -1,4 +1,5 @@
 ﻿using Fluence.Unity.RuntimeTypes;
+using System;
 using System.Runtime.CompilerServices;
 using static Fluence.Unity.FluenceByteCode;
 using static Fluence.Unity.FluenceByteCode.InstructionLine;

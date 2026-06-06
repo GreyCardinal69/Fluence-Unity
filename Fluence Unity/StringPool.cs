@@ -1,4 +1,7 @@
-﻿namespace Fluence.Unity
+﻿using System;
+using System.Collections.Generic;
+
+namespace Fluence.Unity
 {
     /// <summary>
     /// A high-performance string interning cache designed to minimize string allocations during lexing.

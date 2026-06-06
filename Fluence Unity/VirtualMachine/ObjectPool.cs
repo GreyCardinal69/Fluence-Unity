@@ -1,4 +1,6 @@
-﻿namespace Fluence.Unity.VirtualMachine
+﻿using System.Collections.Generic;
+
+namespace Fluence.Unity.VirtualMachine
 {
     /// <summary>
     /// An object pool designed to minimize Garbage Collection 

@@ -1,5 +1,6 @@
 ﻿using Fluence.Unity.RuntimeTypes;
 using Fluence.Unity.VirtualMachine;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using static Fluence.Unity.VirtualMachine.FluenceVirtualMachine;

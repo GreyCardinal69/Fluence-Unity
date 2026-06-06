@@ -1,4 +1,6 @@
 ﻿using Fluence.Unity.VirtualMachine;
+using System.Collections.Generic;
+using System.Linq;
 using static Fluence.Unity.VirtualMachine.FluenceVirtualMachine;
 
 namespace Fluence.Unity.RuntimeTypes
