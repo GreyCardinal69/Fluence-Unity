@@ -1,6 +1,3 @@
-// ==========================================
-// File: QuaternionWrapper.cs
-// ==========================================
 using Fluence.Unity.RuntimeTypes;
 using UnityEngine;
 using static Fluence.Unity.FluenceUnity;
