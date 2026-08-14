@@ -269,13 +269,17 @@ namespace Fluence.Unity.VirtualMachine
             _callStack.Push(initialFrame);
 
             _cachedRegisters = initialFrame.Registers;
+            _cachedWritableCache = initialFrame.WritableCache;
 
             _globals = new RuntimeValue[globalRegisterSlotCount];
             _globalWritableCache = new bool[globalRegisterSlotCount];
 
 #if DEBUG
-            FluenceDebug.DumpByteCodeInstructions(_parser.CompiledCode, _outputLine);
-            FluenceDebug.GenerateCSharpCodeForInstructionList(_parser.CurrentParseState.CodeInstructions, _outputLine);
+            if (_configuration.LogDebugInformation)
+            {
+                FluenceDebug.DumpByteCodeInstructions(_parser.CompiledCode, _outputLine);
+                FluenceDebug.GenerateCSharpCodeForInstructionList(_parser.CurrentParseState.CodeInstructions, _outputLine);
+            }
 #endif
 
             _dispatchTable = new OpcodeHandler[maxOpCode + 1];
@@ -689,7 +693,10 @@ namespace Fluence.Unity.VirtualMachine
                 _ip++;
 
 #if DEBUG
-                _stopwatch.Restart();
+                if (_configuration.CollectBytecodeInstructionStatistics)
+                {
+                    _stopwatch.Restart();
+                }
 #endif
 
                 if (instruction.SpecializedHandler != null)
@@ -702,11 +709,14 @@ namespace Fluence.Unity.VirtualMachine
                 }
 
 #if DEBUG
-                _stopwatch.Stop();
-                _instructionCounts.TryAdd(instruction.Instruction, 0);
-                _instructionCounts[instruction.Instruction]++;
-                _instructionTimings.TryAdd(instruction.Instruction, 0);
-                _instructionTimings[instruction.Instruction] += _stopwatch.ElapsedTicks;
+                if (_configuration.CollectBytecodeInstructionStatistics)
+                {
+                    _stopwatch.Stop();
+                    _instructionCounts.TryAdd(instruction.Instruction, 0);
+                    _instructionCounts[instruction.Instruction]++;
+                    _instructionTimings.TryAdd(instruction.Instruction, 0);
+                    _instructionTimings[instruction.Instruction] += _stopwatch.ElapsedTicks;
+                }
 #endif
             }
 
@@ -1685,24 +1695,24 @@ namespace Fluence.Unity.VirtualMachine
         /// </summary>
         private void ExecuteGetField(InstructionLine instruction)
         {
-            if (instruction.Rhs2 is not StringValue fieldName)
-            {
-                throw ConstructRuntimeException("Internal VM Error: GetField requires a string literal for the field name.");
-            }
+            if (instruction.Rhs2 is not StringValue fieldName) throw ConstructRuntimeException("GetField requires a string literal.");
 
             RuntimeValue instanceValue = GetRuntimeValue(instruction.Rhs, instruction);
 
             if (instanceValue.ObjectReference is Wrapper wrapper)
             {
+                if (wrapper.PropertyGetters != null && wrapper.PropertyGetters.TryGetValue(fieldName.Value, out Func<Wrapper, RuntimeValue> getter))
+                {
+                    SetRegister((TempValue)instruction.Lhs, getter(wrapper));
+                    return;
+                }
                 if (wrapper.InstanceFields.TryGetValue(fieldName.Value, out RuntimeValue value))
                 {
                     SetRegister((TempValue)instruction.Lhs, value);
                     return;
                 }
-                else
-                {
-                    throw ConstructRuntimeException($"Runtime Error: Cannot access property '{fieldName.Value}' on an intrinsic wrapper instance (got type 'Wrapper__{GetDetailedTypeName(instanceValue)}').");
-                }
+                SignalError($"Runtime Error: Property '{fieldName.Value}' does not exist on '{GetDetailedTypeName(instanceValue)}'.");
+                return;
             }
 
             if (instanceValue.ObjectReference is not InstanceObject instance)
@@ -1765,16 +1775,20 @@ namespace Fluence.Unity.VirtualMachine
 
             if (instanceValue.ObjectReference is Wrapper wrapper)
             {
+                RuntimeValue newValue = GetRuntimeValue(instruction.Rhs2, instruction);
+
+                if (wrapper.PropertySetters != null && wrapper.PropertySetters.TryGetValue(fieldName.Value, out Action<Wrapper, RuntimeValue> setter))
+                {
+                    setter(wrapper, newValue);
+                    return;
+                }
                 if (wrapper.InstanceFields.ContainsKey(fieldName.Value))
                 {
-                    RuntimeValue newValue = GetRuntimeValue(instruction.Rhs2, instruction);
                     wrapper.InstanceFields[fieldName.Value] = newValue;
                     return;
                 }
-                else
-                {
-                    throw ConstructRuntimeException($"Runtime Error: Cannot access property '{fieldName.Value}' on an intrinsic wrapper instance (got type 'Wrapper__{GetDetailedTypeName(instanceValue)}').");
-                }
+                SignalError($"Runtime Error: Property '{fieldName.Value}' does not exist on '{GetDetailedTypeName(instanceValue)}'.");
+                return;
             }
 
             if (instanceValue.ObjectReference is not InstanceObject instance)
@@ -2319,6 +2333,7 @@ namespace Fluence.Unity.VirtualMachine
 
             _callStack.Push(newFrame);
             _cachedRegisters = newFrame.Registers;
+            _cachedWritableCache = newFrame.WritableCache;
             _ip = function.StartAddress;
         }
 
@@ -2376,6 +2391,11 @@ namespace Fluence.Unity.VirtualMachine
             else
             {
                 methodBlueprint = instance.Class.Functions[methodName];
+            }
+
+            if (methodBlueprint == null)
+            {
+                throw ConstructRuntimeException($"Runtime Error: Undefined method '{methodName}' on struct '{instance.Class.Name}'.");
             }
 
             // <script> frame.
@@ -2456,6 +2476,7 @@ namespace Fluence.Unity.VirtualMachine
 
             _callStack.Push(newFrame);
             _cachedRegisters = newFrame.Registers;
+            _cachedWritableCache = newFrame.WritableCache;
             _ip = functionToExecute.StartAddress;
         }
 
@@ -2465,31 +2486,41 @@ namespace Fluence.Unity.VirtualMachine
         /// <param name="instance">The instance of a struct to call the method on.</param>
         /// <param name="func">The function of the instance to call.</param>
         /// <returns>The result of the function's return.</returns>
-        internal RuntimeValue ExecuteManualMethodCall(InstanceObject instance, FunctionValue func)
+        internal RuntimeValue ExecuteManualMethodCall(InstanceObject instance, FunctionValue func, params RuntimeValue[] args)
         {
             int savedIp = _ip;
             RuntimeValue[] savedRegisters = _cachedRegisters;
+            bool[] savedWritableCache = _cachedWritableCache;
 
             FunctionObject functionToExecute = CreateFunctionObject(func);
             CallFrame newFrame = _callFramePool.Get();
 
             newFrame.Initialize(this, functionToExecute, -1, null!);
 
-            // Sometimes a struct function may have no arguments, or no "self" used, no temps.
             if (newFrame.Registers.Length > 0)
             {
                 newFrame.Registers[0] = new RuntimeValue(instance);
             }
 
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (i + 1 < newFrame.Registers.Length)
+                {
+                    newFrame.Registers[i + 1] = args[i];
+                }
+            }
+
             _callStack.Push(newFrame);
             _cachedRegisters = newFrame.Registers;
+            _cachedWritableCache = newFrame.WritableCache;
             _ip = functionToExecute.StartAddress;
 
             RuntimeValue returnValue = RuntimeValue.Nil;
+            int targetDepth = _callStack.Count - 1;
 
             while (true)
             {
-                if (_callStack.Peek() != newFrame)
+                if (_callStack.Count == targetDepth)
                 {
                     break;
                 }
@@ -2501,9 +2532,17 @@ namespace Fluence.Unity.VirtualMachine
                 {
                     returnValue = GetRuntimeValue(instruction.Lhs, instruction);
 
-                    _callStack.Pop();
-                    _callFramePool.Return(newFrame);
-                    break;
+                    if (_callStack.Peek() == newFrame)
+                    {
+                        _callStack.Pop();
+                        _callFramePool.Return(newFrame);
+                        break;
+                    }
+                    else
+                    {
+                        ExecuteReturn(instruction);
+                        continue;
+                    }
                 }
 
                 if (instruction.SpecializedHandler != null)
@@ -2523,6 +2562,7 @@ namespace Fluence.Unity.VirtualMachine
 
             _ip = savedIp;
             _cachedRegisters = savedRegisters;
+            _cachedWritableCache = savedWritableCache;
             return returnValue;
         }
 
@@ -2536,14 +2576,18 @@ namespace Fluence.Unity.VirtualMachine
         {
             int savedIp = _ip;
             RuntimeValue[] savedRegisters = _cachedRegisters;
+            bool[] savedWritableCache = _cachedWritableCache;
 
             FunctionObject functionToExecute = CreateFunctionObject(funcBlueprint);
             CallFrame newFrame = _callFramePool.Get();
 
             newFrame.Initialize(this, functionToExecute, -1, null!);
 
+            State = FluenceVMState.Running;
+
             _callStack.Push(newFrame);
             _cachedRegisters = newFrame.Registers;
+            _cachedWritableCache = newFrame.WritableCache;
             _ip = functionToExecute.StartAddress;
 
             foreach (RuntimeValue arg in args) _operandStack.Push(arg);
@@ -2568,10 +2612,11 @@ namespace Fluence.Unity.VirtualMachine
             _cachedRegisters = newFrame.Registers;
             _cachedWritableCache = newFrame.WritableCache;
             RuntimeValue returnValue = RuntimeValue.Nil;
+            int targetDepth = _callStack.Count - 1;
 
             while (true)
             {
-                if (_callStack.Peek() != newFrame)
+                if (_callStack.Count == targetDepth)
                 {
                     break;
                 }
@@ -2583,9 +2628,17 @@ namespace Fluence.Unity.VirtualMachine
                 {
                     returnValue = GetRuntimeValue(instruction.Lhs, instruction);
 
-                    _callStack.Pop();
-                    _callFramePool.Return(newFrame);
-                    break;
+                    if (_callStack.Peek() == newFrame)
+                    {
+                        _callStack.Pop();
+                        _callFramePool.Return(newFrame);
+                        break;
+                    }
+                    else
+                    {
+                        ExecuteReturn(instruction);
+                        continue;
+                    }
                 }
 
                 if (instruction.SpecializedHandler != null)
@@ -2605,6 +2658,8 @@ namespace Fluence.Unity.VirtualMachine
 
             _ip = savedIp;
             _cachedRegisters = savedRegisters;
+            _cachedWritableCache = savedWritableCache;
+            State = FluenceVMState.Finished;
             return returnValue;
         }
 
@@ -2621,7 +2676,13 @@ namespace Fluence.Unity.VirtualMachine
 
             if (structSymbol.StaticIntrinsics.TryGetValue(methodName.Value, out FunctionSymbol intrinsicSymbol))
             {
-                int argCount = _operandStack.Count;
+                int argCount = intrinsicSymbol.Arity;
+
+                if (_operandStack.Count < argCount)
+                {
+                    CreateAndThrowRuntimeException($"Runtime Error: Stack underflow calling '{intrinsicSymbol.Name}'. Expected {argCount} args.");
+                }
+
                 if (intrinsicSymbol.Arity != argCount)
                 {
                     CreateAndThrowRuntimeException($"Runtime Error: Mismatched arity for static intrinsic struct function '{intrinsicSymbol.Name}'. Expected {intrinsicSymbol.Arity}, but got {argCount}.");
@@ -2688,9 +2749,9 @@ namespace Fluence.Unity.VirtualMachine
 
             _callStack.Push(newFrame);
             _cachedRegisters = newFrame.Registers;
+            _cachedWritableCache = newFrame.WritableCache;
             _ip = functionToExecute.StartAddress;
         }
-
 
         /// <summary>
         /// Handles the RETURN instruction, which ends the current function's execution.
@@ -2735,8 +2796,9 @@ namespace Fluence.Unity.VirtualMachine
                 }
             }
 
-            _cachedRegisters = _callStack.Peek().Registers;
-            _cachedWritableCache = _callStack.Peek().WritableCache;
+            CallFrame parentFrame = _callStack.Peek();
+            _cachedRegisters = parentFrame.Registers;
+            _cachedWritableCache = parentFrame.WritableCache;
 
             _cachedRegisters[finishedFrame.DestinationRegister.RegisterIndex] = returnValue;
 
@@ -2815,6 +2877,40 @@ namespace Fluence.Unity.VirtualMachine
                 // A FunctionValue from the bytecode is just a blueprint.
                 // We must convert it into a live, runtime FunctionObject.
                 return new RuntimeValue(CreateFunctionObject(func));
+            }
+
+            if (val is StaticStructAccess ssa)
+            {
+                if (ssa.Struct.StaticFields.TryGetValue(ssa.Name, out RuntimeValue staticValue))
+                {
+                    return staticValue;
+                }
+                return SignalRecoverableErrorAndReturnNil($"Runtime Error: Static field '{ssa.Name}' not found on struct '{ssa.Struct.Name}'.");
+            }
+
+            if (val is PropertyAccessValue pav)
+            {
+                RuntimeValue instanceValue = GetRuntimeValue(pav.Target, instruction);
+
+                if (instanceValue.ObjectReference is Wrapper wrapper)
+                {
+                    if (wrapper.PropertyGetters != null && wrapper.PropertyGetters.TryGetValue(pav.FieldName, out System.Func<Wrapper, RuntimeValue> getter))
+                    {
+                        return getter(wrapper);
+                    }
+                    if (wrapper.InstanceFields.TryGetValue(pav.FieldName, out RuntimeValue value))
+                    {
+                        return value;
+                    }
+                    return SignalRecoverableErrorAndReturnNil($"Runtime Error: Property '{pav.FieldName}' does not exist on '{GetDetailedTypeName(instanceValue)}'.");
+                }
+
+                if (instanceValue.ObjectReference is InstanceObject instance)
+                {
+                    return instance.GetField(pav.FieldName, this);
+                }
+
+                return SignalRecoverableErrorAndReturnNil($"Runtime Error: Cannot access property '{pav.FieldName}' on non-instance object of type '{GetDetailedTypeName(instanceValue)}'.");
             }
 
             return val switch
