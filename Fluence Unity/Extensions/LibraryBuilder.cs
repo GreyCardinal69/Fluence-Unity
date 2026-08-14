@@ -1,6 +1,5 @@
 ﻿using Fluence.Unity.Exceptions;
 using Fluence.Unity.RuntimeTypes;
-using System.Linq;
 
 namespace Fluence.Unity.Extensions
 {

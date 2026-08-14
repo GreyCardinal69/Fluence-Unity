@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Fluence.Unity
+﻿namespace Fluence.Unity
 {
     /// <summary>
     /// A public interface representing a Fluence struct instance.

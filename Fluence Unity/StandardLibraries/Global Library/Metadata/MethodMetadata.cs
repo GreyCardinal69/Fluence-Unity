@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Fluence.Unity.Global
+﻿namespace Fluence.Unity.Global
 {
     /// <summary>
     /// An immutable record holding metadata about a single function or method.

@@ -1,5 +1,4 @@
-﻿using System;
-using static Fluence.Unity.Token;
+﻿using static Fluence.Unity.Token;
 
 namespace Fluence.Unity
 {

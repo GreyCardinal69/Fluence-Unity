@@ -1,7 +1,5 @@
 ﻿using Fluence.Unity.RuntimeTypes;
 using Fluence.Unity.VirtualMachine;
-using System;
-using System.Collections.Generic;
 using System.Text;
 using static Fluence.Unity.VirtualMachine.FluenceVirtualMachine;
 

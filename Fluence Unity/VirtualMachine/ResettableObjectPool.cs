@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Fluence.Unity.VirtualMachine
+﻿namespace Fluence.Unity.VirtualMachine
 {
     /// <summary>
     /// An object pool for objects that require state clearing to prevent memory leaks.

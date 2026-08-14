@@ -1,5 +1,4 @@
 ﻿using Fluence.Unity.RuntimeTypes;
-using System.Collections.Generic;
 using static Fluence.Unity.VirtualMachine.FluenceVirtualMachine;
 
 namespace Fluence.Unity
@@ -8,10 +7,10 @@ namespace Fluence.Unity
     /// A generic wrapper that allows a native C# object
     /// to be exposed and used within the Fluence runtime.
     /// </summary>
-    internal sealed class Wrapper : IFluenceObject
+    internal class Wrapper : IFluenceObject
     {
         /// <summary>The actual C# object being wrapped.</summary>
-        internal object Instance { get; }
+        internal object Instance { get; set; }
 
         /// <summary>
         /// A dictionary of "intrinsic methods" that maps a Fluence method name
@@ -24,15 +23,24 @@ namespace Fluence.Unity
         /// </summary>
         internal Dictionary<string, RuntimeValue> InstanceFields { get; } = new Dictionary<string, RuntimeValue>();
 
+        internal readonly Dictionary<string, Func<Wrapper, RuntimeValue>> PropertyGetters;
+        internal readonly Dictionary<string, Action<Wrapper, RuntimeValue>> PropertySetters;
+
         /// <summary>
         /// Holds a reference to the <see cref="IntrinsicStructSymbol"/> of the Instance this wrapper carries, if it has one.
         /// </summary>
         internal Symbol IntrinsicSymbolMarker { get; set; }
 
-        internal Wrapper(object instance, Dictionary<string, IntrinsicRuntimeMethod> methods)
+        internal Wrapper(
+                   object instance,
+                   Dictionary<string, IntrinsicRuntimeMethod> methods,
+                   Dictionary<string, Func<Wrapper, RuntimeValue>> getters = null!,
+                   Dictionary<string, Action<Wrapper, RuntimeValue>> setters = null!)
         {
             Instance = instance;
             _methods = methods;
+            PropertyGetters = getters;
+            PropertySetters = setters;
         }
 
         /// <inheritdoc/>

@@ -1,5 +1,4 @@
 ﻿using Fluence.Unity.VirtualMachine;
-using System;
 using static Fluence.Unity.VirtualMachine.FluenceVirtualMachine;
 
 namespace Fluence.Unity.RuntimeTypes
