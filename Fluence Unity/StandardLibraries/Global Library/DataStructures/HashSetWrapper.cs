@@ -70,7 +70,7 @@ namespace Fluence.Unity.Global
             HashSet<RuntimeValue> set = (HashSet<RuntimeValue>)self.As<Wrapper>().Instance;
             RuntimeValue arg = vm.PopStack();
             set.Add(arg);
-            return RuntimeValue.Nil;
+            return RuntimeValue.True;
         }
 
         private static RuntimeValue ToString(FluenceVirtualMachine vm, RuntimeValue self)

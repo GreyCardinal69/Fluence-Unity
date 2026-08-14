@@ -111,8 +111,8 @@ namespace Fluence.Unity.Global
             //      Time functions.
             //
 
-            StructSymbol time = new StructSymbol("Time", globalScope);
-            globalScope.Declare("Time".GetHashCode(), time);
+            StructSymbol time = new StructSymbol("FTime", globalScope);
+            globalScope.Declare("FTime".GetHashCode(), time);
 
             time.StaticIntrinsics.Add("now__0", new FunctionSymbol("now__0", 0, (vm, argCount) =>
             {

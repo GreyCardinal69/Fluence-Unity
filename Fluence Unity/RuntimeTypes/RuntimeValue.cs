@@ -140,30 +140,6 @@ namespace Fluence.Unity.RuntimeTypes
             return true;
         }
 
-        public static bool operator !=(RuntimeValue left, RuntimeValue right)
-        {
-            return !(left == right);
-        }
-
-        public static bool operator ==(RuntimeValue left, RuntimeValue right)
-        {
-            if (left.Type != right.Type) return false;
-
-            return left.Type switch
-            {
-                RuntimeValueType.Nil => true,
-                RuntimeValueType.Boolean => left.IntValue == right.IntValue,
-                RuntimeValueType.Number => left.NumberType == right.NumberType && left.NumberType switch
-                {
-                    RuntimeNumberType.Int => left.IntValue == right.IntValue,
-                    RuntimeNumberType.Long => left.LongValue == right.LongValue,
-                    RuntimeNumberType.Float => left.FloatValue == right.FloatValue,
-                    _ => left.DoubleValue == right.DoubleValue
-                },
-                RuntimeValueType.Object => Equals(left.ObjectReference, right.ObjectReference),
-                _ => false
-            };
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal readonly double ToDouble() => NumberType switch
@@ -234,6 +210,90 @@ namespace Fluence.Unity.RuntimeTypes
                 RuntimeValueType.Object => ObjectReference?.ToString() ?? "nil",
                 _ => "??? (Undefined Value)",
             };
+        }
+
+        public static bool operator ==(RuntimeValue left, RuntimeValue right)
+        {
+            if (left.Type != right.Type) return false;
+
+            return left.Type switch
+            {
+                RuntimeValueType.Nil => true,
+                RuntimeValueType.Boolean => left.IntValue != 0,
+                RuntimeValueType.Number => left.NumberType == right.NumberType && left.NumberType switch
+                {
+                    RuntimeNumberType.Int => left.IntValue == right.IntValue,
+                    RuntimeNumberType.Long => left.LongValue == right.LongValue,
+                    RuntimeNumberType.Float => left.FloatValue == right.FloatValue,
+                    _ => left.DoubleValue == right.DoubleValue
+                },
+                RuntimeValueType.Object => CompareObjects(left.ObjectReference, right.ObjectReference),
+                _ => false
+            };
+        }
+
+        public static bool operator !=(RuntimeValue left, RuntimeValue right)
+        {
+            return !(left == right);
+        }
+
+        private static string ExtractStringValue(object obj)
+        {
+            if (obj == null) return "";
+
+            if (obj is StringObject strObj) return strObj.Value ?? "";
+
+            if (obj is string s) return s;
+
+            return obj.ToString() ?? "";
+        }
+
+        private static bool CompareObjects(object left, object right)
+        {
+            if (left == null && right == null) return true;
+            if (left == null || right == null) return false;
+
+            if (left is StringObject || left is string || right is StringObject || right is string)
+            {
+                string sL = ExtractStringValue(left).Replace("\"", "").Trim();
+                string sR = ExtractStringValue(right).Replace("\"", "").Trim();
+                return string.Equals(sL, sR, System.StringComparison.Ordinal);
+            }
+
+            if (left is CharObject chrL && right is CharObject chrR)
+            {
+                return chrL.Value == chrR.Value;
+            }
+
+            return left.Equals(right);
+        }
+
+        public override int GetHashCode()
+        {
+            if (Type == RuntimeValueType.Object && ObjectReference != null)
+            {
+                if (ObjectReference is StringObject or string)
+                {
+                    string s = ExtractStringValue(ObjectReference).Replace("\"", "").Trim();
+                    return HashCode.Combine(Type, s.GetHashCode());
+                }
+                if (ObjectReference is CharObject chr)
+                {
+                    return HashCode.Combine(Type, (int)chr.Value);
+                }
+                return HashCode.Combine(Type, ObjectReference.GetHashCode());
+            }
+            return HashCode.Combine(Type, IntValue, LongValue, DoubleValue);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is RuntimeValue other && Equals(other);
+        }
+
+        public bool Equals(RuntimeValue other)
+        {
+            return this == other;
         }
     }
 }

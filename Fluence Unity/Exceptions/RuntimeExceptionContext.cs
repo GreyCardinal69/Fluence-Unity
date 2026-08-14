@@ -163,10 +163,10 @@ namespace Fluence.Unity
                 foreach (KeyValuePair<string, RuntimeValue> kvp in displayItems)
                 {
                     string value = kvp.Value.ToString();
-                    string end = value.Length > 150 ? "...\"" : "\"";
+                    string end = value.Length > 800 ? "...\"" : "\"";
 
                     // Unity-safe substring slice replacement for standard BCL
-                    string slicedValue = value[..Math.Min(150, value.Length)];
+                    string slicedValue = value[..Math.Min(800, value.Length)];
                     string formattedValue = $"\"{slicedValue}{end}".Replace("\n", "\\n").Replace("\r\n", "\\r\\n");
 
                     string paddedKey = kvp.Key.PadRight(maxKeyLength);

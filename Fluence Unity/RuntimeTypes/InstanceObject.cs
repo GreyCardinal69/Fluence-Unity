@@ -20,9 +20,16 @@ namespace Fluence.Unity.RuntimeTypes
         /// <summary>
         /// A dictionary storing the state of this specific instance.
         /// </summary>
-        private readonly Dictionary<string, RuntimeValue> _fields = new();
+        private readonly Dictionary<string, RuntimeValue> _fields = new Dictionary<string, RuntimeValue>();
 
-        internal InstanceObject(StructSymbol symb) => Class = symb;
+        internal InstanceObject(StructSymbol symb)
+        {
+            Class = symb;
+            foreach (string fieldName in Class.Fields)
+            {
+                _fields[fieldName] = RuntimeValue.Nil;
+            }
+        }
 
         /// <summary>
         /// Gets the value of a field or method from the instance.
@@ -36,6 +43,11 @@ namespace Fluence.Unity.RuntimeTypes
             if (_fields.TryGetValue(fieldName, out RuntimeValue value))
             {
                 return value;
+            }
+
+            if (Class.Fields.Contains(fieldName))
+            {
+                return RuntimeValue.Nil;
             }
 
             if (Class.StaticFields.TryGetValue(fieldName, out RuntimeValue value2))

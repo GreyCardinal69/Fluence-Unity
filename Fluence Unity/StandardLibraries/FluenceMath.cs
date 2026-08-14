@@ -102,6 +102,14 @@ namespace Fluence.Unity
                 return new RuntimeValue(Math.Atanh(vm.PopStack().AsDouble(vm)));
             }, mathNamespace, new List<string>() { "value" }));
 
+            mathNamespace.Declare("lerp__3".GetHashCode(), new FunctionSymbol("lerp__3", 3, (vm, argCount) =>
+            {
+                float t = (float)vm.PopStack().DoubleValue;
+                float b = (float)vm.PopStack().DoubleValue;
+                float a = (float)vm.PopStack().DoubleValue;
+                return new RuntimeValue(Mathf.Lerp(a, b, t));
+            }, mathNamespace, new List<string>() { "a", "b", "t" }));
+
             mathNamespace.Declare("ceil__1".GetHashCode(), new FunctionSymbol("ceil__1", 1, (vm, argCount) =>
             {
                 RuntimeValue val = vm.PopStack();
