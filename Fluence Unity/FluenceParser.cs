@@ -92,6 +92,10 @@ namespace Fluence.Unity
                 }
             }
 
+            // Four operands.
+            SetUsage(OperandUsage.AllFour,
+                InstructionCode.AssignTwo, InstructionCode.PushFourParams);
+
             // Three operands.
             SetUsage(OperandUsage.AllThree,
                 InstructionCode.Add, InstructionCode.Subtract, InstructionCode.Multiply, InstructionCode.Divide,
