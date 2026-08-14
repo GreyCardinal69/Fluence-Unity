@@ -36,6 +36,12 @@ namespace Fluence.Unity
             {
                 FluenceDiagnostics.Register(scope, _outputLine, _input, errorOutput);
             };
+
+            // Unity.
+            _libraryRegistry[FluenceUnity.NamespaceName.GetHashCode()] = (scope) =>
+            {
+                FluenceUnity.Register(scope, _outputLine, _input, errorOutput);
+            };
         }
 
         /// <summary>

@@ -80,7 +80,7 @@ namespace Fluence.Unity
 
                 if (line.Instruction == InstructionCode.Divide)
                 {
-                    if (line.Rhs2 is NumberValue num && (int)num.Value == 2)
+                    if (line.Rhs2 is NumberValue num && num.Type == NumberValue.NumberType.Integer && (int)num.Value == 2)
                     {
                         line.Instruction = InstructionCode.BitwiseRShift;
                         line.Rhs2 = NumberValue.One;
@@ -89,7 +89,7 @@ namespace Fluence.Unity
                 }
                 else if (line.Instruction == InstructionCode.Modulo)
                 {
-                    if (line.Rhs2 is NumberValue num && (int)num.Value == 2)
+                    if (line.Rhs2 is NumberValue num && num.Type == NumberValue.NumberType.Integer && (int)num.Value == 2)
                     {
                         line.Instruction = InstructionCode.BitwiseAnd;
                         line.Rhs2 = NumberValue.One;
@@ -322,23 +322,52 @@ namespace Fluence.Unity
 
                 if (lambdaDepth > 0) continue;
 
+                void InvalidateIfReadBeforeAssign(Value operand)
+                {
+                    if (operand is VariableValue varOp && !varOp.IsGlobal)
+                    {
+                        if (!_varStatsMap.TryGetValue(varOp.Hash, out (int Count, Value ConstVal, int DefIndex) stats))
+                        {
+                            stats = (Count: 0, ConstVal: null, DefIndex: -1);
+                        }
+
+                        if (stats.Count == 0)
+                        {
+                            stats.Count = 1000;
+                            _varStatsMap[varOp.Hash] = stats;
+                        }
+                    }
+                }
+
+                if (insn.Rhs != null) InvalidateIfReadBeforeAssign(insn.Rhs);
+                if (insn.Rhs2 != null) InvalidateIfReadBeforeAssign(insn.Rhs2);
+                if (insn.Rhs3 != null) InvalidateIfReadBeforeAssign(insn.Rhs3);
+
                 if (insn.Lhs is VariableValue varLhs && !varLhs.IsGlobal)
                 {
                     if (!_varStatsMap.TryGetValue(varLhs.Hash, out (int Count, Value ConstVal, int DefIndex) stats))
                     {
-                        stats = (0, null, 0);
+                        stats = (Count: 0, ConstVal: null, DefIndex: -1);
                     }
 
                     if (insn.Instruction == InstructionCode.Assign)
                     {
-                        stats.Count++;
-                        if (IsAConstantValue(insn.Rhs))
+                        if (stats.Count == 0)
                         {
-                            stats.ConstVal = insn.Rhs;
-                            stats.DefIndex = i;
+                            stats.Count = 1;
+                            if (IsAConstantValue(insn.Rhs))
+                            {
+                                stats.ConstVal = insn.Rhs;
+                                stats.DefIndex = i;
+                            }
+                            else
+                            {
+                                stats.ConstVal = null;
+                            }
                         }
                         else
                         {
+                            stats.Count++;
                             stats.ConstVal = null;
                         }
                     }
@@ -353,24 +382,6 @@ namespace Fluence.Unity
             }
 
             lambdaDepth = 0;
-
-            void TryReplace(ref Value operand, bool byteCodeChanged, bool constantFoldingDidWork)
-            {
-                if (operand is VariableValue varOp && !varOp.IsGlobal && _varStatsMap.TryGetValue(varOp.Hash, out (int Count, Value ConstVal, int DefIndex) stat))
-                {
-                    if (stat.Count == 1 && stat.ConstVal != null)
-                    {
-                        operand = stat.ConstVal;
-                        byteCodeChanged = true;
-                        constantFoldingDidWork = true;
-
-                        if (bytecode[stat.DefIndex] != null)
-                        {
-                            bytecode[stat.DefIndex] = null!;
-                        }
-                    }
-                }
-            }
 
             for (int i = startIndex; i < bytecode.Count; i++)
             {
@@ -390,9 +401,29 @@ namespace Fluence.Unity
 
                 if (lambdaDepth > 0) continue;
 
-                TryReplace(ref insn.Rhs, byteCodeChanged, constantFoldingDidWork);
-                TryReplace(ref insn.Rhs2, byteCodeChanged, constantFoldingDidWork);
-                TryReplace(ref insn.Rhs3, byteCodeChanged, constantFoldingDidWork);
+                void TryReplace(ref Value operand, ref bool changed, ref bool folded)
+                {
+                    if (operand is VariableValue varOp && !varOp.IsGlobal && _varStatsMap.TryGetValue(varOp.Hash, out (int Count, Value ConstVal, int DefIndex) stat))
+                    {
+                        if (stat.Count == 1 && stat.ConstVal != null)
+                        {
+                            operand = stat.ConstVal;
+                            changed = true;
+                            folded = true;
+
+                            if (bytecode[stat.DefIndex] != null)
+                            {
+                                bytecode[stat.DefIndex] = null!;
+                            }
+                        }
+                    }
+                }
+
+                TryReplace(ref insn.Rhs, ref byteCodeChanged, ref constantFoldingDidWork);
+                TryReplace(ref insn.Rhs2, ref byteCodeChanged, ref constantFoldingDidWork);
+                TryReplace(ref insn.Rhs3, ref byteCodeChanged, ref constantFoldingDidWork);
+
+                bytecode[i] = insn;
             }
         }
 

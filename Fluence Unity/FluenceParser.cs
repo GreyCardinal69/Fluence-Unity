@@ -21,6 +21,8 @@ namespace Fluence.Unity
 
         private readonly ParseState _currentParseState;
 
+        private readonly FluenceInterpreter _interpreter;
+
         /// <summary>
         /// Marks the index of the last bytecode instruction, up to which the bytecode has already been passed through by
         /// the <see cref="FluenceOptimizer"/>.
@@ -290,7 +292,7 @@ namespace Fluence.Unity
             }
         }
 
-        internal FluenceParser(string root, VirtualMachineConfiguration config, TextOutputMethod outLine, TextOutputMethod outNormal, TextInputMethod input, TextOutputMethod outError)
+        internal FluenceParser(string root, FluenceInterpreter interpreter, VirtualMachineConfiguration config, TextOutputMethod outLine, TextOutputMethod outNormal, TextInputMethod input, TextOutputMethod outError)
         {
             _vmConfiguration = config;
             _currentParseState = new ParseState(this);
@@ -300,16 +302,20 @@ namespace Fluence.Unity
             _allProjectFiles.AddRange(Directory.GetFiles(root, "*.fl", SearchOption.AllDirectories));
             _currentParseState.ProjectFilePaths.AddRange(_allProjectFiles);
 
+            _interpreter = interpreter;
+
             _outputLine = outLine;
             _intrinsicsManager = new FluenceIntrinsics(this, outLine, input, outNormal, outError);
             _intrinsicsManager.RegisterCoreGlobals();
         }
 
-        internal FluenceParser(FluenceLexer lexer, VirtualMachineConfiguration config, TextOutputMethod outLine, TextOutputMethod outNormal, TextInputMethod input, TextOutputMethod outError)
+        internal FluenceParser(FluenceLexer lexer, FluenceInterpreter interpreter, VirtualMachineConfiguration config, TextOutputMethod outLine, TextOutputMethod outNormal, TextInputMethod input, TextOutputMethod outError)
         {
             _vmConfiguration = config;
             _currentParseState = new ParseState(this);
             _lexer = lexer;
+
+            _interpreter = interpreter;
 
             _outputLine = outLine;
             _intrinsicsManager = new FluenceIntrinsics(this, outLine, input, outNormal, outError);
@@ -434,6 +440,10 @@ namespace Fluence.Unity
 
         internal void AddNameSpace(FluenceScope nameSpace)
         {
+            if (_interpreter.DisallowedLibraries.Contains(nameSpace.Name))
+            {
+                throw ConstructParserException($"Security exception, the library: '{nameSpace.Name}' is not allowed to be used due to sandboxing settings.", _lexer.PeekCurrentToken());
+            }
             _currentParseState.NameSpaces.TryAdd(nameSpace.Name.GetHashCode(), nameSpace);
         }
 
@@ -446,8 +456,11 @@ namespace Fluence.Unity
                 FluenceLexer lexer = new FluenceLexer(File.ReadAllText(path), path);
                 lexer.LexFullSource();
 
-#if DEBUG
-                lexer.DumpTokenStream($"Initial Token Stream (Before Pre-Parsing declarations) | {path}", _outputLine);
+#if DEBUG     
+                if (_vmConfiguration.LogDebugInformation)
+                {
+                    lexer.DumpTokenStream($"Initial Token Stream (Before Pre-Parsing declarations) | {path}", _outputLine);
+                }
 #endif
 
                 _lexer = lexer;
@@ -469,7 +482,10 @@ namespace Fluence.Unity
                 _lexer = new FluenceLexer(_tokenStreams[i], _allProjectFiles[i]);
 
 #if DEBUG
-                _lexer.DumpTokenStream($"Token stream after parsing declarations. | {_currentParsingFileName}", _outputLine);
+                if (_vmConfiguration.LogDebugInformation)
+                {
+                    _lexer.DumpTokenStream($"Token stream after parsing declarations. | {_currentParsingFileName}", _outputLine);
+                }
 #endif
 
                 while (!_lexer.HasReachedEnd)
@@ -495,7 +511,10 @@ namespace Fluence.Unity
             }
 
 #if DEBUG
-            _lexer.DumpTokenStream("Initial Token Stream (Before Pre-Parsing declarations)", _outputLine);
+            if (_vmConfiguration.LogDebugInformation)
+            {
+                _lexer.DumpTokenStream("Initial Token Stream (Before Pre-Parsing declarations)", _outputLine);
+            }
 #endif
 
             int parsedUpTo = 0;
@@ -507,7 +526,10 @@ namespace Fluence.Unity
             }
 
 #if DEBUG
-            _lexer.DumpTokenStream("Token stream after parsing declarations.", _outputLine);
+            if (_vmConfiguration.LogDebugInformation)
+            {
+                _lexer.DumpTokenStream("Token stream after parsing declarations.", _outputLine);
+            }
 #endif
 
             while (!_lexer.HasReachedEnd)
@@ -2081,14 +2103,7 @@ namespace Fluence.Unity
 
                     if (expressionTokens == null || expressionTokens.Count == 0)
                     {
-                        _currentParseState.AddCodeInstruction(
-                            new InstructionLine(
-                                InstructionCode.SetField,
-                                VariableValue.SelfVariable,
-                                new StringValue(fieldName),
-                                NilValue.NilInstance
-                            )
-                        );
+
                         continue;
                     }
 
@@ -3723,7 +3738,7 @@ namespace Fluence.Unity
 
             // The "value" of this entire ternary expression for the rest of the parser
             // is the temporary variable that holds the chosen result.
-            return result;
+            return ResolveValue(result);
         }
 
         /// <summary>
@@ -5289,7 +5304,7 @@ namespace Fluence.Unity
         {
             if (AdvanceTokenIfMatch(TokenType.TYPE_OF))
             {
-                Value operand = ParseAccess();
+                Value operand = ResolveValue(ParseAccess());
 
                 TempValue resultRegister = new TempValue(_currentParseState.NextTempNumber++);
 

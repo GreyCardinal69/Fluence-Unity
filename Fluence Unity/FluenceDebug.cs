@@ -34,32 +34,44 @@ namespace Fluence.Unity
         }
 
         /// <summary>
-        /// Dumps a list of bytecode instructions to the console in a formatted table.
+        /// Dumps a list of bytecode instructions to the console in a formatted table as a single output entry.
         /// </summary>
         /// <param name="instructions">The list of instructions to dump.</param>
+        /// <param name="outMethod">The delegate to receive the complete formatted log.</param>
         internal static void DumpByteCodeInstructions(List<InstructionLine> instructions, TextOutputMethod outMethod)
         {
-            outMethod("--- Compiled Bytecode ---\n");
-            outMethod("Value types with unique print format:");
-            outMethod("VariableValue: Var_{Name}_{Register Index}_{Is Global?}_{Is Readonly?}");
-            outMethod("TempValue: {Name}_{Register Index}");
-            outMethod("FunctionValue: Func_{Name}_{Arity}_{TotalRegisters}_{Scope}_{StartAddress}\n");
-            outMethod(string.Format("{0,-5} {1,-25} {2,-40} {3,-55} {4,-40} {5, -40}", "", "TYPE", "LHS", "RHS", "RHS2", "RHS3"));
-            outMethod("");
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+            sb.AppendLine("--- Compiled Bytecode ---\n");
+            sb.AppendLine("Value types with unique print format:");
+            sb.AppendLine("VariableValue: Var_{Name}_{Register Index}_{Is Global?}_{Is Readonly?}");
+            sb.AppendLine("TempValue: {Name}_{Register Index}");
+            sb.AppendLine("FunctionValue: Func_{Name}_{Arity}_{TotalRegisters}_{Scope}_{StartAddress}\n");
+            sb.AppendLine(string.Format("{0,-5} {1,-25} {2,-40} {3,-55} {4,-40} {5, -40}", "", "TYPE", "LHS", "RHS", "RHS2", "RHS3"));
+            sb.AppendLine("");
 
             if (instructions == null || instructions.Count == 0)
             {
-                outMethod("(No instructions generated)");
+                sb.AppendLine("(No instructions generated)");
+                outMethod(sb.ToString());
                 return;
             }
 
             for (int i = 0; i < instructions.Count; i++)
             {
-                if (instructions[i] == null) outMethod($"{i:D4}: NULL");
-                else outMethod($"{i:D4}: {instructions[i].ToString().Replace("\n", "")}");
+                if (instructions[i] == null)
+                {
+                    sb.AppendLine($"{i:D4}: NULL");
+                }
+                else
+                {
+                    sb.AppendLine($"{i:D4}: {instructions[i].ToString().Replace("\n", "")}");
+                }
             }
 
-            outMethod("\n--- End of Bytecode ---");
+            sb.AppendLine("\n--- End of Bytecode ---");
+
+            outMethod(sb.ToString());
         }
 
         /// <summary>
