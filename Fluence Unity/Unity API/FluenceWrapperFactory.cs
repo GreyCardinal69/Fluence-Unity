@@ -1,4 +1,5 @@
 using Fluence.Unity.RuntimeTypes;
+using UnityEngine;
 
 namespace Fluence.Unity.API
 {
@@ -79,8 +80,8 @@ namespace Fluence.Unity.API
         {
             if (instance == null) return RuntimeValue.Nil;
 
-            var emptyMethods = new System.Collections.Generic.Dictionary<string, VirtualMachine.FluenceVirtualMachine.IntrinsicRuntimeMethod>();
-            var bareWrapper = new Wrapper(instance, emptyMethods);
+            Dictionary<string, VirtualMachine.FluenceVirtualMachine.IntrinsicRuntimeMethod> emptyMethods = new Dictionary<string, VirtualMachine.FluenceVirtualMachine.IntrinsicRuntimeMethod>();
+            Wrapper bareWrapper = new Wrapper(instance, emptyMethods);
 
             return new RuntimeValue(bareWrapper);
         }
