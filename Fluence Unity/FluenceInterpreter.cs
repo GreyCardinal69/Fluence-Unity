@@ -462,16 +462,16 @@ namespace Fluence.Unity
                         // do don't reset the VM.
                         return;
                     }
-
-                    _vm.SetIntrinsicLibraryWhiteAndBlackLists(AllowedLibraries, DisallowedLibraries);
-                    _vm.RunFor(duration);
-#if DEBUG
-                    if (_vmConfiguration.CollectBytecodeInstructionStatistics)
-                    {
-                        _vm.DumpPerformanceProfile();
-                    }
-#endif
                 }
+
+                _vm.SetIntrinsicLibraryWhiteAndBlackLists(AllowedLibraries, DisallowedLibraries);
+                _vm.RunFor(duration);
+#if DEBUG
+                if (_vmConfiguration.CollectBytecodeInstructionStatistics)
+                {
+                    _vm.DumpPerformanceProfile();
+                }
+#endif
             }
             catch (FluenceException ex)
             {
