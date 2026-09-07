@@ -212,6 +212,14 @@ namespace Fluence.Unity.VirtualMachine
                 return new RuntimeValue(left.ToLong() & right.ToLong());
             }
 
+            if (left.Type == RuntimeValueType.Object && right.Type == RuntimeValueType.Object && left.Is<ListObject>() && right.Is<ListObject>())
+            {
+                var leftList = left.As<ListObject>();
+                var rightList = right.As<ListObject>();
+
+                return new RuntimeValue(new ListObject(leftList.Elements.Intersect(rightList.Elements).ToList()));
+            }
+
             return new RuntimeValue(left.IntValue & right.IntValue);
         }
 
@@ -280,7 +288,15 @@ namespace Fluence.Unity.VirtualMachine
             FluenceVirtualMachine vm,
             Func<FluenceVirtualMachine, RuntimeValue, RuntimeValue, RuntimeValue> opFunction)
         {
-            if (left.Type != RuntimeValueType.Number || right.Type != RuntimeValueType.Number) return null;
+            Value lhsOperand = insn.Rhs;
+            Value rhsOperand = insn.Rhs2;
+            Value destOperand = insn.Lhs;
+
+            int destIndex;
+            int leftIndex;
+            int rightIndex;
+
+            RuntimeValue[] globalRegisters = vm.GlobalRegisters;
 
             if (AttemptToModifyAReadonlyVariable(insn, vm, out string name))
             {
@@ -312,19 +328,14 @@ namespace Fluence.Unity.VirtualMachine
                 }
             }
 
-            Value lhsOperand = insn.Rhs;
-            Value rhsOperand = insn.Rhs2;
-            Value destOperand = insn.Lhs;
-            RuntimeValue[] globalRegisters = vm.GlobalRegisters;
-
             if (insn.Lhs is TempValue destTemp)
             {
-                int destIndex = destTemp.RegisterIndex;
+                destIndex = destTemp.RegisterIndex;
 
                 if (lhsOperand is VariableValue varLeft && rhsOperand is VariableValue varRight)
                 {
-                    int leftIndex = varLeft.RegisterIndex;
-                    int rightIndex = varRight.RegisterIndex;
+                    leftIndex = varLeft.RegisterIndex;
+                    rightIndex = varRight.RegisterIndex;
 
                     if (varLeft.IsGlobal && varRight.IsGlobal)
                         return (i, v) => v.CurrentRegisters[destIndex] = opFunction(v, globalRegisters[leftIndex], globalRegisters[rightIndex]);
@@ -340,15 +351,15 @@ namespace Fluence.Unity.VirtualMachine
 
                 if (lhsOperand is TempValue tempLeft && rhsOperand is TempValue tempRight)
                 {
-                    int leftIndex = tempLeft.RegisterIndex;
-                    int rightIndex = tempRight.RegisterIndex;
+                    leftIndex = tempLeft.RegisterIndex;
+                    rightIndex = tempRight.RegisterIndex;
                     return (i, v) => v.CurrentRegisters[destIndex] = opFunction(v, v.CurrentRegisters[leftIndex], v.CurrentRegisters[rightIndex]);
                 }
 
                 if (lhsOperand is TempValue tempLeft2 && rhsOperand is VariableValue varRight2)
                 {
-                    int leftIndex = tempLeft2.RegisterIndex;
-                    int rightIndex = varRight2.RegisterIndex;
+                    leftIndex = tempLeft2.RegisterIndex;
+                    rightIndex = varRight2.RegisterIndex;
 
                     if (varRight2.IsGlobal)
                         return (i, v) => v.CurrentRegisters[destIndex] = opFunction(v, v.CurrentRegisters[leftIndex], globalRegisters[rightIndex]);
@@ -358,8 +369,8 @@ namespace Fluence.Unity.VirtualMachine
 
                 if (lhsOperand is VariableValue varLeft2 && rhsOperand is TempValue tempRight2)
                 {
-                    int leftIndex = varLeft2.RegisterIndex;
-                    int rightIndex = tempRight2.RegisterIndex;
+                    leftIndex = varLeft2.RegisterIndex;
+                    rightIndex = tempRight2.RegisterIndex;
 
                     if (varLeft2.IsGlobal)
                         return (i, v) => v.CurrentRegisters[destIndex] = opFunction(v, globalRegisters[leftIndex], v.CurrentRegisters[rightIndex]);
@@ -369,14 +380,14 @@ namespace Fluence.Unity.VirtualMachine
 
                 if (lhsOperand is TempValue tempLeft3 && rhsOperand is NumberValue num2)
                 {
-                    int leftIndex = tempLeft3.RegisterIndex;
+                    leftIndex = tempLeft3.RegisterIndex;
                     RuntimeValue rightConst = vm.GetRuntimeValue(num2, insn);
                     return (i, v) => v.CurrentRegisters[destIndex] = opFunction(v, v.CurrentRegisters[leftIndex], rightConst);
                 }
 
                 if (lhsOperand is VariableValue varOp2 && rhsOperand is NumberValue numConst)
                 {
-                    int leftIndex = varOp2.RegisterIndex;
+                    leftIndex = varOp2.RegisterIndex;
                     RuntimeValue rightConst = vm.GetRuntimeValue(numConst, insn);
 
                     if (varOp2.IsGlobal)
@@ -394,14 +405,14 @@ namespace Fluence.Unity.VirtualMachine
                 if (lhsOperand is NumberValue num4 && rhsOperand is TempValue temp4)
                 {
                     RuntimeValue leftConst = vm.GetRuntimeValue(num4, insn);
-                    int rightIndex = temp4.RegisterIndex;
+                    rightIndex = temp4.RegisterIndex;
                     return (i, v) => v.CurrentRegisters[destIndex] = opFunction(v, leftConst, v.CurrentRegisters[rightIndex]);
                 }
 
                 if (lhsOperand is NumberValue num5 && rhsOperand is VariableValue varRight3)
                 {
                     RuntimeValue leftConst = vm.GetRuntimeValue(num5, insn);
-                    int rightIndex = varRight3.RegisterIndex;
+                    rightIndex = varRight3.RegisterIndex;
 
                     if (varRight3.IsGlobal)
                         return (i, v) => v.CurrentRegisters[destIndex] = opFunction(v, leftConst, globalRegisters[rightIndex]);
@@ -411,13 +422,13 @@ namespace Fluence.Unity.VirtualMachine
             }
             else if (insn.Lhs is VariableValue destVar)
             {
-                int destIndex = destVar.RegisterIndex;
+                destIndex = destVar.RegisterIndex;
                 bool destIsGlobal = destVar.IsGlobal;
 
                 if (lhsOperand is VariableValue varLeft && rhsOperand is VariableValue varRight)
                 {
-                    int leftIndex = varLeft.RegisterIndex;
-                    int rightIndex = varRight.RegisterIndex;
+                    leftIndex = varLeft.RegisterIndex;
+                    rightIndex = varRight.RegisterIndex;
 
                     if (destIsGlobal)
                     {
@@ -449,8 +460,8 @@ namespace Fluence.Unity.VirtualMachine
 
                 if (lhsOperand is TempValue tempLeft && rhsOperand is TempValue tempRight)
                 {
-                    int leftIndex = tempLeft.RegisterIndex;
-                    int rightIndex = tempRight.RegisterIndex;
+                    leftIndex = tempLeft.RegisterIndex;
+                    rightIndex = tempRight.RegisterIndex;
 
                     if (destIsGlobal)
                         return (i, v) => globalRegisters[destIndex] = opFunction(v, v.CurrentRegisters[leftIndex], v.CurrentRegisters[rightIndex]);
@@ -460,8 +471,8 @@ namespace Fluence.Unity.VirtualMachine
 
                 if (lhsOperand is TempValue tempLeft2 && rhsOperand is VariableValue varRight2)
                 {
-                    int leftIndex = tempLeft2.RegisterIndex;
-                    int rightIndex = varRight2.RegisterIndex;
+                    leftIndex = tempLeft2.RegisterIndex;
+                    rightIndex = varRight2.RegisterIndex;
 
                     if (destIsGlobal)
                     {
@@ -481,8 +492,8 @@ namespace Fluence.Unity.VirtualMachine
 
                 if (lhsOperand is VariableValue varLeft2 && rhsOperand is TempValue tempRight2)
                 {
-                    int leftIndex = varLeft2.RegisterIndex;
-                    int rightIndex = tempRight2.RegisterIndex;
+                    leftIndex = varLeft2.RegisterIndex;
+                    rightIndex = tempRight2.RegisterIndex;
 
                     if (destIsGlobal)
                     {
@@ -502,7 +513,7 @@ namespace Fluence.Unity.VirtualMachine
 
                 if (lhsOperand is TempValue tempLeft3 && rhsOperand is NumberValue num2)
                 {
-                    int leftIndex = tempLeft3.RegisterIndex;
+                    leftIndex = tempLeft3.RegisterIndex;
                     RuntimeValue rightConst = vm.GetRuntimeValue(num2, insn);
 
                     if (destIsGlobal)
@@ -513,7 +524,7 @@ namespace Fluence.Unity.VirtualMachine
 
                 if (lhsOperand is VariableValue varOp2 && rhsOperand is NumberValue numConst)
                 {
-                    int leftIndex = varOp2.RegisterIndex;
+                    leftIndex = varOp2.RegisterIndex;
                     RuntimeValue rightConst = vm.GetRuntimeValue(numConst, insn);
 
                     if (destIsGlobal)
@@ -545,7 +556,7 @@ namespace Fluence.Unity.VirtualMachine
                 if (lhsOperand is NumberValue num4 && rhsOperand is TempValue temp4)
                 {
                     RuntimeValue leftConst = vm.GetRuntimeValue(num4, insn);
-                    int rightIndex = temp4.RegisterIndex;
+                    rightIndex = temp4.RegisterIndex;
 
                     if (destIsGlobal)
                         return (i, v) => globalRegisters[destIndex] = opFunction(v, leftConst, v.CurrentRegisters[rightIndex]);
@@ -556,7 +567,7 @@ namespace Fluence.Unity.VirtualMachine
                 if (lhsOperand is NumberValue num5 && rhsOperand is VariableValue varRight3)
                 {
                     RuntimeValue leftConst = vm.GetRuntimeValue(num5, insn);
-                    int rightIndex = varRight3.RegisterIndex;
+                    rightIndex = varRight3.RegisterIndex;
 
                     if (destIsGlobal)
                     {
