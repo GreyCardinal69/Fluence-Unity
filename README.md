@@ -709,6 +709,21 @@ vector = Vector2(a,b);
 vector = Vector2 { x:1, y:2 };
 ```
 
+Operator overloading exists for the following: +, -, /, * and ==. Here is an example:
+```rust
+struct Vector2 {
+    x; y;
+    func init(x,y) => self.x, self.y <~| x,y;
+    
+    func op_add(other) => Vector2(self.x + other.x, self.y + other.y);
+    func op_sub(other) => Vector2(self.x - other.x, self.y - other.y);
+    func op_mul(scalar) => Vector2(self.x * scalar, self.y * scalar);
+    func op_div(scalar) => Vector2(self.x / scalar, self.y / scalar);
+    func op_eq(other) => self.x == other.x && self.y == other.y;
+}
+```
+If the parser sees a function called op_add, op_sub, etc. it will treat that as an overload, does not affect names like op_add_something, or other names that start with but arent just "op_+/-*==".
+
 ### Traits
 Traits are blueprints for behavior. They allow different structs to share a common set of methods and fields without requiring inheritance. A struct can implement multiple traits.
 
