@@ -141,6 +141,11 @@ namespace Fluence.Unity
         internal Dictionary<string, RuntimeValue> StaticFields { get; } = new Dictionary<string, RuntimeValue>();
 
         /// <summary>
+        /// A dictionary managing overloaded operators for the struct class, their names and functionValues.
+        /// </summary>
+        internal Dictionary<string, FunctionValue> OperatorOverloads { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
         /// Stores natively implemented static intrinsic methods.
         /// </summary>
         public Dictionary<string, FunctionSymbol> StaticIntrinsics { get; } = new Dictionary<string, FunctionSymbol>();
